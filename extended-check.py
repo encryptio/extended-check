@@ -318,7 +318,7 @@ class ConsoleReporter(Reporter):
             self.fh.write(','.join(strings) + "\n")
 
     def finish(self):
-        if all_ok:
+        if self.all_ok:
             self.fh.write("All files okay!\n")
         else:
             self.fh.write("Some files failed!\n")
