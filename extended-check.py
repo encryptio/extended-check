@@ -3,6 +3,7 @@
 import binascii
 import collections
 import hashlib
+import multiprocessing
 import multiprocessing.pool
 import os
 import re
@@ -267,7 +268,9 @@ class VerificationData(object):
 
         return report
 
-    def report_for_all_files(self, parallelism=4):
+    def report_for_all_files(self, parallelism=None):
+        if parallelism is None:
+            parallelism = multiprocessing.cpu_count() + 1
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
         return pool.imap(lambda file: self.report_for_file(file), sorted(self.found_names))
 
