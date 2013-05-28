@@ -66,7 +66,7 @@ class VerificationData(object):
         self.hashes = collections.defaultdict(dict)
         self.other_data = collections.defaultdict(dict)
 
-    def add_par2(self, file_path):
+    def _add_par2(self, file_path):
         self.found_names.add(file_path)
         self.skip_verify.add(file_path)
 
@@ -121,7 +121,7 @@ class VerificationData(object):
                 self.hashes[path]['md5'] = file_md5
                 self.other_data[path]['length'] = file_length
 
-    def add_sfv(self, file_path):
+    def _add_sfv(self, file_path):
         self.found_names.add(file_path)
         self.skip_verify.add(file_path)
 
@@ -161,7 +161,7 @@ class VerificationData(object):
                         else:
                             self.other_data[path]['length'] = sizes[windows_filename]
 
-    def add_md5sum(self, file_path):
+    def _add_md5sum(self, file_path):
         self.found_names.add(file_path)
         self.skip_verify.add(file_path)
 
@@ -174,7 +174,7 @@ class VerificationData(object):
                     path = normalize_path(os.path.join(base, res.group(2)))
                     self.hashes[path]['md5'] = binascii.a2b_hex(res.group(1))
 
-    def add_shasum(self, file_path):
+    def _add_shasum(self, file_path):
         self.found_names.add(file_path)
         self.skip_verify.add(file_path)
 
@@ -217,14 +217,14 @@ class VerificationData(object):
                 lfile = file.lower()
 
                 if lfile.endswith('.par2'):
-                    self.add_par2(file_path)
+                    self._add_par2(file_path)
                 elif lfile.endswith('.sfv'):
-                    self.add_sfv(file_path)
+                    self._add_sfv(file_path)
                 elif lfile.endswith('.md5') or lfile.endswith('.md5sum'):
-                    self.add_md5sum(file_path)
+                    self._add_md5sum(file_path)
                 elif lfile.endswith('.shasum') or lfile.endswith('.sha1sum') or \
                         lfile.endswith('.sha256sum') or lfile.endswith('.sha512sum'):
-                    self.add_shasum(file_path)
+                    self._add_shasum(file_path)
                 elif lfile.endswith('.flac'):
                     self.other_data[file_path]['flac'] = True
                 elif lfile.endswith('.zip') or lfile.endswith('.cbz'):
