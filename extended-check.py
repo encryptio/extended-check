@@ -278,10 +278,10 @@ class VerificationData(object):
         """
 
         if path not in self.found_names:
-            return {'path': path, 'checks': {'not_found': False}, 'skipped': False}
+            return {'path': path, 'checks': {'not_seen': False}, 'skipped': False}
 
         if not os.path.exists(path):
-            return {'path': path, 'checks': {'not_found': False}, 'skipped': False}
+            return {'path': path, 'checks': {'nonexistent': False}, 'skipped': False}
         
         report = dict(path=path, checks={})
 
