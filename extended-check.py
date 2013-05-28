@@ -247,6 +247,9 @@ class VerificationData(object):
     def report_for_file(self, path):
         if path not in self.found_names:
             return {'path': path, 'checks': {'not_found': False}, 'skipped': False}
+
+        if not os.path.exists(path):
+            return {'path': path, 'checks': {'not_found': False}, 'skipped': False}
         
         report = dict(path=path, checks={})
 
