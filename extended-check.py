@@ -169,7 +169,7 @@ class VerificationData(object):
                 res = re.match(r'^([a-fA-F0-9]{32})\s[*\s](.+?)\s*$', line)
                 if res:
                     path = normalize_path(os.path.join(base, res.group(2)))
-                    db['hashes'][path]['md5'] = binascii.a2b_hex(res.group(1))
+                    self.hashes[path]['md5'] = binascii.a2b_hex(res.group(1))
 
     def add_shasum(self, file_path):
         self.found_names.add(file_path)
