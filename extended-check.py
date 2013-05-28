@@ -268,41 +268,58 @@ class VerificationData(object):
 
         return report
 
-    def report_for_all_files(self, parallelism=None):
+    def all_reports(self, parallelism=None):
         if parallelism is None:
             parallelism = multiprocessing.cpu_count() + 1
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
         return pool.imap(lambda file: self.report_for_file(file), sorted(self.found_names))
 
-    def console_verify(self):
-        all_ok = True
-        for report in self.report_for_all_files():
-            ok = all(report['checks'].values()) or report['skipped']
-            if not ok:
-                all_ok = False
+class Reporter(object):
+    def start(self):
+        pass
+    def report(self, report):
+        raise NotImplementedError()
+    def finish(self):
+        pass
 
-            if report['skipped'] or len(report['checks']) == 0:
-                report_color = 34 # blue
-            elif all(report['checks'].values()):
-                report_color = 32 # green
-            else:
-                report_color = 31 # red
+class ConsoleReporter(Reporter):
+    def __init__(self, fh):
+        self.fh = fh
 
-            sys.stderr.write("\033[%sm%s\033[m: " % (report_color, report['path']))
+    def start(self):
+        self.fh.write("Checking files...\n")
+        self.all_ok = True
 
-            if report['skipped']:
-                sys.stderr.write("skipped\n")
-            else:
-                strings = []
-                for check in sorted(report['checks'].keys()):
-                    if report['checks'][check]:
-                        report_color = 32 # green
-                    else:
-                        report_color = 31 # red
-                    strings.append("\033[%sm%s\033[m" % (report_color, check))
-                sys.stderr.write(','.join(strings) + "\n")
+    def report(self, report):
+        if not (report['skipped'] or all(report['checks'].values())):
+            self.all_ok = False
 
-        return all_ok
+        if report['skipped'] or len(report['checks']) == 0:
+            report_color = 34 # blue
+        elif all(report['checks'].values()):
+            report_color = 32 # green
+        else:
+            report_color = 31 # red
+
+        self.fh.write("\033[%sm%s\033[m: " % (report_color, report['path']))
+
+        if report['skipped']:
+            self.fh.write("skipped\n")
+        else:
+            strings = []
+            for check in sorted(report['checks'].keys()):
+                if report['checks'][check]:
+                    report_color = 32 # green
+                else:
+                    report_color = 31 # red
+                strings.append("\033[%sm%s\033[m" % (report_color, check))
+            self.fh.write(','.join(strings) + "\n")
+
+    def finish(self):
+        if all_ok:
+            self.fh.write("All files okay!\n")
+        else:
+            self.fh.write("Some files failed!\n")
 
 if __name__ == '__main__':
     db = VerificationData()
@@ -313,12 +330,21 @@ if __name__ == '__main__':
         for arg in sys.argv[1:]:
             db.add_tree(arg, verbose=True)
 
-    sys.stderr.write("Checking files...\n")
-    ret = db.console_verify()
+    reporters = []
+    reporters.append(ConsoleReporter(fh=sys.stderr))
 
-    if ret:
-        sys.stderr.write("All files okay!\n")
-    else:
-        sys.stderr.write("Some files failed!\n")
+    for reporter in reporters:
+        reporter.start()
 
-    sys.exit(0 if ret else 1)
+    all_ok = True
+    for report in db.all_reports():
+        for reporter in reporters:
+            reporter.report(report)
+
+        if not (report['skipped'] or all(report['checks'].values())):
+            self.all_ok = False
+
+    for reporter in reporters:
+        reporter.finish()
+
+    sys.exit(0 if all_ok else 1)
