@@ -276,6 +276,9 @@ class VerificationData(object):
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
         return pool.imap(lambda file: self.report_for_file(file), sorted(self.found_names))
 
+    def count_reports(self):
+        return len(self.found_names)
+
 class Reporter(object):
     def start(self):
         pass
@@ -379,6 +382,7 @@ class HTMLReporter(Reporter):
 def main(py_exec_name, *args):
     parser = argparse.ArgumentParser(description='Check validity of files')
     parser.add_argument('-v', '--verbose', default=False, action='store_true')
+    parser.add_argument('-p', '--progress', default=False, action='store_true')
     parser.add_argument('--html', help='Save a report to this HTML file')
     parser.add_argument('paths', default=['.'], nargs='*')
     options = parser.parse_args(args)
@@ -396,13 +400,28 @@ def main(py_exec_name, *args):
     for reporter in reporters:
         reporter.start()
 
+    if options.progress:
+        sys.stderr.write("\r\033[K0/%s" % db.count_reports())
+
     all_ok = True
+    report_index = 1
     for report in db.all_reports():
+        if options.progress:
+            sys.stderr.write("\r\033[K")
+
         for reporter in reporters:
             reporter.report(report)
 
+        if options.progress:
+            sys.stderr.write("\r\033[K%s/%s" % (report_index, db.count_reports()))
+
         if not (report['skipped'] or all(report['checks'].values())):
             all_ok = False
+
+        report_index += 1
+
+    if options.progress:
+        sys.stderr.write("\r\033[K")
 
     for reporter in reporters:
         reporter.finish()
