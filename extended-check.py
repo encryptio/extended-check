@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import binascii
 import cgi
 import collections
@@ -375,17 +376,27 @@ class HTMLReporter(Reporter):
         self.fh.write("</body>\n")
         self.fh.write("</html>\n")
 
-if __name__ == '__main__':
-    db = VerificationData()
-
-    if len(sys.argv) == 1:
-        db.add_tree('.', verbose=True)
-    else:
-        for arg in sys.argv[1:]:
-            db.add_tree(arg, verbose=True)
+def main(py_exec_name, *args):
+    parser = argparse.ArgumentParser(description='Check validity of files')
+    parser.add_argument('-v', '--verbose', default=False, action='store_true')
+    parser.add_argument('--html', help='Save a report to this HTML file')
+    parser.add_argument('paths', default=['.'], nargs='*')
+    options = parser.parse_args(args)
 
     reporters = []
-    reporters.append(ConsoleReporter(fh=sys.stderr))
+    if options.verbose:
+        reporters.append(ConsoleReporter(fh=sys.stderr))
+    if options.html:
+        reporters.append(HTMLReporter(options.html))
+
+    if len(reporters) == 0:
+        parser.print_usage()
+        print "ERROR: There was nothing to do."
+        sys.exit(1)
+
+    db = VerificationData()
+    for path in options.paths:
+        db.add_tree(path, verbose=options.verbose)
 
     for reporter in reporters:
         reporter.start()
@@ -396,9 +407,12 @@ if __name__ == '__main__':
             reporter.report(report)
 
         if not (report['skipped'] or all(report['checks'].values())):
-            self.all_ok = False
+            all_ok = False
 
     for reporter in reporters:
         reporter.finish()
 
     sys.exit(0 if all_ok else 1)
+
+if __name__ == '__main__':
+    main(*sys.argv)
