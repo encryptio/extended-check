@@ -36,24 +36,24 @@ class CRC32Hasher(object):
     def digest(self):
         return struct.pack('>I', self.crc & 0xffffffff)
 
-def run_sums(fh, hashers):
-    while True:
-        chunk = fh.read(1024*1024)
-        if len(chunk) == 0:
-            break
-
-        for h in hashers:
-            h.update(chunk)
-
-def make_hashers(kinds):
-    def make_hasher(kind):
-        if kind == 'crc32':
-            return CRC32Hasher()
-        else:
-            return hashlib.new(kind)
-    return map(make_hasher, kinds)
-
 def get_hashes(filename, kinds):
+    def run_sums(fh, hashers):
+        while True:
+            chunk = fh.read(1024*1024)
+            if len(chunk) == 0:
+                break
+
+            for h in hashers:
+                h.update(chunk)
+
+    def make_hashers(kinds):
+        def make_hasher(kind):
+            if kind == 'crc32':
+                return CRC32Hasher()
+            else:
+                return hashlib.new(kind)
+        return map(make_hasher, kinds)
+
     with open(filename, 'rb', 0) as fh:
         hashers = make_hashers(kinds)
         run_sums(fh, hashers)
