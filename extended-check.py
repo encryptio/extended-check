@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import binascii
+import cgi
 import collections
 import hashlib
 import multiprocessing
@@ -320,6 +321,59 @@ class ConsoleReporter(Reporter):
             self.fh.write("All files okay!\n")
         else:
             self.fh.write("Some files failed!\n")
+
+class HTMLReporter(Reporter):
+    def __init__(self, html_file):
+        self.html_file = html_file
+
+    def start(self):
+        self.fh = open(self.html_file, 'wb')
+        self.write_header()
+
+    def finish(self):
+        self.write_footer()
+        self.fh.close()
+        del self.fh
+
+    def write_header(self):
+        self.fh.write("<html>\n")
+        self.fh.write("<head>\n")
+        self.fh.write("<style>\n")
+        self.fh.write("  .success { background-color: #8f8; border: 1px solid #5c5; padding: 1px 2px; margin-right: 2px; }\n")
+        self.fh.write("  .failure { background-color: #f00; border: 1px solid #c00; padding: 1px 2px; margin-right: 2px; color: #fff; }\n")
+        self.fh.write("  .unverifiable { background-color: #ccc; border: 1px solid #999; }\n")
+        self.fh.write("  .skipped { background-color: #cec; border: 1px solid #9b9; }\n")
+        self.fh.write("  td { padding-top: 3px; }\n")
+        self.fh.write("  body, td { font-size: small; }\n")
+        self.fh.write("</style>\n")
+        self.fh.write("</head>\n")
+        self.fh.write("<body>\n")
+        self.fh.write("<table id=\"verification\">\n")
+
+    def report(self, report):
+        if report['skipped']:
+            self.fh.write("<tr><td class=\"name skipped\">%s</td></tr>\n" % cgi.escape(report['path']))
+            return
+
+        if len(report['checks']) == 0:
+            self.fh.write("<tr><td class=\"name unverifiable\">%s</td></tr>\n" % cgi.escape(report['path']))
+            return
+
+        self.fh.write("<tr>")
+        self.fh.write("<td class=\"name\">%s</td>" % cgi.escape(report['path']))
+
+        self.fh.write("<td class=\"checks\">")
+        for check in report['checks'].iterkeys():
+            _class = 'success' if report['checks'][check] else 'failure'
+            self.fh.write("<span class=\"%s\">%s</span>" % (_class, cgi.escape(check)))
+        self.fh.write("</td>")
+
+        self.fh.write("</tr>\n")
+
+    def write_footer(self):
+        self.fh.write("</table>\n")
+        self.fh.write("</body>\n")
+        self.fh.write("</html>\n")
 
 if __name__ == '__main__':
     db = VerificationData()
