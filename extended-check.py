@@ -228,14 +228,19 @@ class VerificationData(object):
             re.compile('.+[^a-zA-Z0-9]([a-fA-F0-9]{8})\.[^.]{3,4}$'),
         ]
 
+        ignore_names = set(['.git', '_by_tags', '.DS_Store'])
+
         for root, dirs, files in os.walk(path):
             for i in range(len(dirs)):
                 if i >= len(dirs):
                     break
-                if dirs[i] == '.git' or dirs[i] == '_by_tags':
+                if dirs[i] in ignore_names:
                     del dirs[i]
 
             for file in files:
+                if file in ignore_names:
+                    continue
+
                 file_path = normalize_path(os.path.join(root, file))
                 self.found_names.add(file_path)
                 if verbose:
