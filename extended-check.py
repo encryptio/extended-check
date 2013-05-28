@@ -389,11 +389,6 @@ def main(py_exec_name, *args):
     if options.html:
         reporters.append(HTMLReporter(options.html))
 
-    if len(reporters) == 0:
-        parser.print_usage()
-        print "ERROR: There was nothing to do."
-        sys.exit(1)
-
     db = VerificationData()
     for path in options.paths:
         db.add_tree(path, verbose=options.verbose)
