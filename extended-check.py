@@ -14,6 +14,11 @@ import struct
 import zlib
 
 def normalize_path(path):
+    """
+    Normalize a path to a canonical form, so that different ways to get the
+    same path always hit the same dict entries.
+    """
+
     while path.startswith('./'):
         path = path[2:]
 
@@ -27,6 +32,10 @@ def normalize_path(path):
     return path
 
 class CRC32Hasher(object):
+    """
+    hashlib-like wrapper for zlib.crc32
+    """
+
     def __init__(self):
         self.crc = zlib.crc32('')
 
@@ -37,6 +46,14 @@ class CRC32Hasher(object):
         return struct.pack('>I', self.crc & 0xffffffff)
 
 def get_hashes(filename, kinds):
+    """
+    Hashes a file with multiple hash functions, whose names are passed as
+    the kinds argument.
+
+    >>> get_hashes("test.txt", ["md5", "sha1", "crc32"])
+    {"md5": "...", "sha1": "...", "crc32": "..."}
+    """
+
     def run_sums(fh, hashers):
         while True:
             chunk = fh.read(1024*1024)
@@ -60,6 +77,11 @@ def get_hashes(filename, kinds):
         return dict(zip(kinds, map(lambda h: h.digest(), hashers)))
 
 class VerificationData(object):
+    """
+    Provides functions for gathering and verifying a set of files'
+    information.
+    """
+
     def __init__(self):
         self.found_names = set()
         self.skip_verify = set()
@@ -194,6 +216,11 @@ class VerificationData(object):
                         self.hashes[path]['sha512'] = hash
 
     def add_tree(self, path, verbose=False):
+        """
+        Recursively find all verification data in the given path and add it
+        to the database.
+        """
+
         crc32_regexes = [
             re.compile('.+\[([a-fA-F0-9]{8})\]'),
             re.compile('.+\{([a-fA-F0-9]{8})\}'),
@@ -245,6 +272,11 @@ class VerificationData(object):
                             break
 
     def report_for_file(self, path):
+        """
+        Checks a given file with verification data in the database and
+        returns a report of the validity of the file.
+        """
+
         if path not in self.found_names:
             return {'path': path, 'checks': {'not_found': False}, 'skipped': False}
 
@@ -274,23 +306,52 @@ class VerificationData(object):
         return report
 
     def all_reports(self, parallelism=None):
+        """
+        Returns an iterable of reports for all files in the database.
+        """
+
         if parallelism is None:
             parallelism = multiprocessing.cpu_count() + 1
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
         return pool.imap(lambda file: self.report_for_file(file), sorted(self.found_names))
 
     def count_reports(self):
+        """
+        Returns the number of reports that would be returned by all_reports.
+        """
+
         return len(self.found_names)
 
 class Reporter(object):
+    """
+    Abstract base class for reporters. Reporters are given a stream of
+    reports from a VerificationData instance and should display and/or
+    log the data in a reporter-specific manner.
+    """
+
     def start(self):
+        """
+        Called before iteration begins. Optional.
+        """
         pass
+
     def report(self, report):
+        """
+        Called for each report yielded from the VerificationData reports.
+        """
         raise NotImplementedError()
+
     def finish(self):
+        """
+        Called after iteration finishes. Optional.
+        """
         pass
 
 class ConsoleReporter(Reporter):
+    """
+    Reports verification status to the terminal on the given filehandle.
+    """
+
     def __init__(self, fh):
         self.fh = fh
 
@@ -330,6 +391,10 @@ class ConsoleReporter(Reporter):
             self.fh.write("Some files failed!\n")
 
 class HTMLReporter(Reporter):
+    """
+    Reports verification status to an HTML file.
+    """
+
     def __init__(self, html_file):
         self.html_file = html_file
 
