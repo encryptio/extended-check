@@ -9,8 +9,9 @@ import multiprocessing
 import multiprocessing.pool
 import os
 import re
-import sys
 import struct
+import subprocess
+import sys
 import zipfile
 import zlib
 
@@ -85,6 +86,18 @@ def check_zip(filename):
         return False
     else:
         return True
+
+_can_check_rar_flag = None
+def can_check_rar():
+    global _can_check_rar_flag
+    if _can_check_rar_flag is not None:
+        return _can_check_rar_flag
+
+    _can_check_rar_flag = not subprocess.call('which unrar', shell=True)
+    return _can_check_rar_flag
+
+def check_rar(filename):
+    return not subprocess.call(['unrar', 't', '-inul', '--', filename])
 
 class VerificationData(object):
     """
@@ -329,6 +342,9 @@ class VerificationData(object):
 
         if 'zip' in other_data:
             report['checks']['zip'] = check_zip(path)
+
+        if 'rar' in other_data and can_check_rar():
+            report['checks']['rar'] = check_rar(path)
 
         if len(hashes):
             actual_hashes = get_hashes(path, hashes.keys())
