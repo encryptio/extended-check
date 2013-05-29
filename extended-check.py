@@ -395,7 +395,7 @@ class ConsoleReporter(Reporter):
 
     def finish(self):
         if self.all_ok:
-            self.fh.write("All files okay!\n")
+            self.fh.write("No problems found!\n")
         else:
             self.fh.write("Some files failed!\n")
 
