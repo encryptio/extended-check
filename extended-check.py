@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import struct
+import zipfile
 import zlib
 
 def normalize_path(path):
@@ -75,6 +76,15 @@ def get_hashes(filename, kinds):
         hashers = make_hashers(kinds)
         run_sums(fh, hashers)
         return dict(zip(kinds, map(lambda h: h.digest(), hashers)))
+
+def check_zip(filename):
+    try:
+        with zipfile.ZipFile(filename, 'r') as zf:
+            assert zf.testzip() is None
+    except Exception:
+        return False
+    else:
+        return True
 
 class VerificationData(object):
     """
@@ -316,6 +326,9 @@ class VerificationData(object):
         elif 'length_mod_2e32' in other_data:
             actual_size = os.path.getsize(path)
             report['checks']['length_mod_2e32'] = (actual_size & 0xffffffff) == other_data['length_mod_2e32']
+
+        if 'zip' in other_data:
+            report['checks']['zip'] = check_zip(path)
 
         if len(hashes):
             actual_hashes = get_hashes(path, hashes.keys())
