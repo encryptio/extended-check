@@ -111,6 +111,19 @@ def can_check_flac():
 def check_flac(filename):
     return not subprocess.call(['flac', '-t', '--totally-silent', filename])
 
+_can_check_png_flag = None
+def can_check_png():
+    global _can_check_png_flag
+    if _can_check_png_flag is not None:
+        return _can_check_png_flag
+
+    _can_check_png_flag = not subprocess.call('which pngcheck >/dev/null 2>/dev/null', shell=True)
+    return _can_check_png_flag
+
+def check_png(filename):
+    with open(os.devnull, 'w') as null:
+        return not subprocess.call(['pngcheck', '-q', filename], stdout=null, stderr=null)
+
 class VerificationData(object):
     """
     Provides functions for gathering and verifying a set of files'
@@ -360,6 +373,9 @@ class VerificationData(object):
 
         if 'flac' in other_data and can_check_flac():
             report['checks']['flac'] = check_flac(path)
+
+        if 'png' in other_data and can_check_png():
+            report['checks']['png'] = check_png(path)
 
         if len(hashes):
             actual_hashes = get_hashes(path, hashes.keys())
