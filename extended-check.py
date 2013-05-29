@@ -242,6 +242,10 @@ class VerificationData(object):
                     continue
 
                 file_path = normalize_path(os.path.join(root, file))
+
+                if not os.path.exists(file_path):
+                    continue
+
                 self.found_names.add(file_path)
                 if verbose:
                     sys.stderr.write("adding %s\n" % file_path)
