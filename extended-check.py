@@ -93,7 +93,7 @@ def can_check_rar():
     if _can_check_rar_flag is not None:
         return _can_check_rar_flag
 
-    _can_check_rar_flag = not subprocess.call('which unrar', shell=True)
+    _can_check_rar_flag = not subprocess.call('which unrar >/dev/null 2>/dev/null', shell=True)
     return _can_check_rar_flag
 
 def check_rar(filename):
@@ -104,7 +104,7 @@ def can_check_flac():
     if _can_check_flac_flag is not None:
         return _can_check_flac_flag
 
-    _can_check_flac_flag = not subprocess.call('which flac', shell=True)
+    _can_check_flac_flag = not subprocess.call('which flac >/dev/null 2>/dev/null', shell=True)
     return _can_check_flac_flag
 
 def check_flac(filename):
