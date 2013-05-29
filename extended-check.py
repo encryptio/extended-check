@@ -99,6 +99,17 @@ def can_check_rar():
 def check_rar(filename):
     return not subprocess.call(['unrar', 't', '-inul', '--', filename])
 
+def can_check_flac():
+    global _can_check_flac_flag
+    if _can_check_flac_flag is not None:
+        return _can_check_flac_flag
+
+    _can_check_flac_flag = not subprocess.call('which flac', shell=True)
+    return _can_check_flac_flag
+
+def check_flac(filename):
+    return not subprocess.call(['flac', '-t', '--totally-silent', filename])
+
 class VerificationData(object):
     """
     Provides functions for gathering and verifying a set of files'
@@ -345,6 +356,9 @@ class VerificationData(object):
 
         if 'rar' in other_data and can_check_rar():
             report['checks']['rar'] = check_rar(path)
+
+        if 'flac' in other_data and can_check_flac():
+            report['checks']['flac'] = check_flac(path)
 
         if len(hashes):
             actual_hashes = get_hashes(path, hashes.keys())
