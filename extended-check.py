@@ -99,6 +99,7 @@ def can_check_rar():
 def check_rar(filename):
     return not subprocess.call(['unrar', 't', '-inul', '--', filename])
 
+_can_check_flac_flag = None
 def can_check_flac():
     global _can_check_flac_flag
     if _can_check_flac_flag is not None:
