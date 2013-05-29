@@ -306,6 +306,9 @@ class VerificationData(object):
         if 'length' in other_data:
             actual_size = os.path.getsize(path)
             report['checks']['length'] = actual_size == other_data['length']
+        elif 'length_mod_2e32' in other_data:
+            actual_size = os.path.getsize(path)
+            report['checks']['length_mod_2e32'] = (actual_size & 0xffffffff) == other_data['length_mod_2e32']
 
         if len(hashes):
             actual_hashes = get_hashes(path, hashes.keys())
