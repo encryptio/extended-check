@@ -94,7 +94,26 @@ class VerificationData(object):
 
         base = os.path.dirname(file_path)
 
-        with open(file_path, 'r') as fh:
+        def add_par2_packet(packet):
+            # packet contains:
+            # 0-15 file id
+            # 16-31 md5 hash of entire file
+            # 32-47 md5 hash of first 16KiB
+            # 48-55 byte length of file
+            # 56-end filename, null padded
+
+            file_md5 = packet[16:32]
+            file_length = struct.unpack('<Q', packet[48:56])[0]
+            file_name = packet[56:]
+            while file_name.endswith('\x00'):
+                file_name = file_name[:-1]
+
+            path = normalize_path(os.path.join(base, file_name))
+
+            self.hashes[path]['md5'] = file_md5
+            self.other_data[path]['length'] = file_length
+
+        def scan_packets(fh):
             while True:
                 buf = fh.read(4)
                 if len(buf) == 0:
@@ -125,23 +144,11 @@ class VerificationData(object):
                     # corrupt packet
                     continue
 
-                # packet_data contains:
-                # 0-15 file id
-                # 16-31 md5 hash of entire file
-                # 32-47 md5 hash of first 16KiB
-                # 48-55 byte length of file
-                # 56-end filename, null padded
+                yield packet_data
 
-                file_md5 = packet_data[16:32]
-                file_length = struct.unpack('<Q', packet_data[48:56])[0]
-                file_name = packet_data[56:]
-                while file_name.endswith('\x00'):
-                    file_name = file_name[:-1]
-
-                path = normalize_path(os.path.join(base, file_name))
-
-                self.hashes[path]['md5'] = file_md5
-                self.other_data[path]['length'] = file_length
+        with open(file_path, 'r') as fh:
+            for packet in scan_packets(fh):
+                add_par2_packet(packet)
 
     def _add_sfv(self, file_path):
         self.found_names.add(file_path)
