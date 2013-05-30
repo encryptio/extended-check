@@ -392,14 +392,16 @@ class VerificationData(object):
         if parallelism is None:
             parallelism = multiprocessing.cpu_count() + 1
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
-        return pool.imap(lambda file: self.report_for_file(file), sorted(self.found_names))
+
+        all_names = sorted(set(list(self.found_names) + self.hashes.keys() + self.other_data.keys()))
+        return pool.imap(lambda file: self.report_for_file(file), all_names)
 
     def count_reports(self):
         """
         Returns the number of reports that would be returned by all_reports.
         """
 
-        return len(self.found_names)
+        return len(set(list(self.found_names) + self.hashes.keys() + self.other_data.keys()))
 
 class Reporter(object):
     """
