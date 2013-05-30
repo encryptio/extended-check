@@ -328,12 +328,12 @@ class VerificationData(object):
                     self.other_data[file_path]['jpeg'] = True
                 elif lfile.endswith('.png'):
                     self.other_data[file_path]['png'] = True
-                else:
-                    for regex in crc32_regexes:
-                        res = regex.match(lfile)
-                        if res:
-                            self.hashes[file_path]['crc32'] = binascii.a2b_hex(res.group(1))
-                            break
+
+                for regex in crc32_regexes:
+                    res = regex.match(lfile)
+                    if res:
+                        self.hashes[file_path]['crc32'] = binascii.a2b_hex(res.group(1))
+                        break
 
     def report_for_file(self, path):
         """
