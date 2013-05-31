@@ -130,6 +130,13 @@ class VerificationData(object):
     information.
     """
 
+    crc32_regexes = [
+        re.compile('.+\[([a-fA-F0-9]{8})\]'),
+        re.compile('.+\{([a-fA-F0-9]{8})\}'),
+        re.compile('.+\(([a-fA-F0-9]{8})\)'),
+        re.compile('.+[^a-zA-Z0-9]([a-fA-F0-9]{8})\.[^.]{3,4}$'),
+    ]
+
     def __init__(self):
         self.found_names = set()
         self.skip_verify = set()
@@ -270,70 +277,72 @@ class VerificationData(object):
                     elif len(res.group(1)) == 128:
                         self.hashes[path]['sha512'] = hash
 
+    def add_file(self, path, verbose=False):
+        """
+        Adds a single file to the database.
+        """
+
+        path = normalize_path(path)
+
+        if not os.path.exists(path):
+            return
+
+        self.found_names.add(path)
+        if verbose:
+            sys.stderr.write("adding %s\n" % path)
+
+        lpath = path.lower()
+
+        if lpath.endswith('.par2'):
+            self._add_par2(path)
+        elif lpath.endswith('.sfv'):
+            self._add_sfv(path)
+        elif lpath.endswith('.md5') or lpath.endswith('.md5sum'):
+            self._add_md5sum(path)
+        elif lpath.endswith('.shasum') or lpath.endswith('.sha1sum') or \
+                lpath.endswith('.sha256sum') or lpath.endswith('.sha512sum'):
+            self._add_shasum(path)
+        elif lpath.endswith('.flac'):
+            self.other_data[path]['flac'] = True
+        elif lpath.endswith('.zip') or lpath.endswith('.cbz'):
+            self.other_data[path]['zip'] = True
+        elif lpath.endswith('.rar') or lpath.endswith('.cbr'):
+            self.other_data[path]['rar'] = True
+        elif lpath.endswith('.7z'):
+            self.other_data[path]['7z'] = True
+        elif lpath.endswith('.jpg') or lpath.endswith('.jpeg'):
+            self.other_data[path]['jpeg'] = True
+        elif lpath.endswith('.png'):
+            self.other_data[path]['png'] = True
+
+        for regex in self.crc32_regexes:
+            res = regex.match(lpath)
+            if res:
+                self.hashes[path]['crc32'] = binascii.a2b_hex(res.group(1))
+                break
+
     def add_tree(self, path, verbose=False):
         """
         Recursively find all verification data in the given path and add it
         to the database.
         """
 
-        crc32_regexes = [
-            re.compile('.+\[([a-fA-F0-9]{8})\]'),
-            re.compile('.+\{([a-fA-F0-9]{8})\}'),
-            re.compile('.+\(([a-fA-F0-9]{8})\)'),
-            re.compile('.+[^a-zA-Z0-9]([a-fA-F0-9]{8})\.[^.]{3,4}$'),
-        ]
-
         ignore_names = set(['.git', '_by_tags', '.DS_Store'])
 
-        for root, dirs, files in os.walk(path):
-            for i in range(len(dirs)):
-                if i >= len(dirs):
-                    break
-                if dirs[i] in ignore_names:
-                    del dirs[i]
-
-            for file in files:
-                if file in ignore_names:
-                    continue
-
-                file_path = normalize_path(os.path.join(root, file))
-
-                if not os.path.exists(file_path):
-                    continue
-
-                self.found_names.add(file_path)
-                if verbose:
-                    sys.stderr.write("adding %s\n" % file_path)
-
-                lfile = file.lower()
-
-                if lfile.endswith('.par2'):
-                    self._add_par2(file_path)
-                elif lfile.endswith('.sfv'):
-                    self._add_sfv(file_path)
-                elif lfile.endswith('.md5') or lfile.endswith('.md5sum'):
-                    self._add_md5sum(file_path)
-                elif lfile.endswith('.shasum') or lfile.endswith('.sha1sum') or \
-                        lfile.endswith('.sha256sum') or lfile.endswith('.sha512sum'):
-                    self._add_shasum(file_path)
-                elif lfile.endswith('.flac'):
-                    self.other_data[file_path]['flac'] = True
-                elif lfile.endswith('.zip') or lfile.endswith('.cbz'):
-                    self.other_data[file_path]['zip'] = True
-                elif lfile.endswith('.rar') or lfile.endswith('.cbr'):
-                    self.other_data[file_path]['rar'] = True
-                elif lfile.endswith('.7z'):
-                    self.other_data[file_path]['7z'] = True
-                elif lfile.endswith('.jpg') or lfile.endswith('.jpeg'):
-                    self.other_data[file_path]['jpeg'] = True
-                elif lfile.endswith('.png'):
-                    self.other_data[file_path]['png'] = True
-
-                for regex in crc32_regexes:
-                    res = regex.match(lfile)
-                    if res:
-                        self.hashes[file_path]['crc32'] = binascii.a2b_hex(res.group(1))
+        if os.path.isfile(path):
+            self.add_file(path)
+        else:
+            for root, dirs, files in os.walk(path):
+                for i in range(len(dirs)):
+                    if i >= len(dirs):
                         break
+                    if dirs[i] in ignore_names:
+                        del dirs[i]
+
+                for file in files:
+                    if file in ignore_names:
+                        continue
+                    self.add_file(os.path.join(root, file))
 
     def report_for_file(self, path):
         """
