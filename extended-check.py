@@ -78,14 +78,28 @@ def get_hashes(filename, kinds):
         run_sums(fh, hashers)
         return dict(zip(kinds, map(lambda h: h.digest(), hashers)))
 
+_can_check_zip_external_flag = None
+def can_check_zip_external():
+    global _can_check_zip_external_flag
+    if _can_check_rar_flag is not None:
+        return _can_check_rar_flag
+
+    _can_check_zip_external_flag = not subprocess.call('which unzip >/dev/null 2>/dev/null', shell=True)
+    return _can_check_zip_external_flag
+
 def check_zip(filename):
-    try:
-        with zipfile.ZipFile(filename, 'r') as zf:
-            assert zf.testzip() is None
-    except Exception:
-        return False
+    if can_check_zip_external():
+        with open(os.devnull, 'w') as null:
+            return not subprocess.call(['unzip', '-tqq', filename], stdout=null, stderr=null)
     else:
-        return True
+        # fallback to internal; serializes on the GIL
+        try:
+            with zipfile.ZipFile(filename, 'r') as zf:
+                assert zf.testzip() is None
+        except Exception:
+            return False
+        else:
+            return True
 
 _can_check_rar_flag = None
 def can_check_rar():
