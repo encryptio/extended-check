@@ -72,7 +72,7 @@ def get_hashes(filename, kinds):
                 return CRC32Hasher()
             else:
                 return hashlib.new(kind)
-        return map(make_hasher, kinds)
+        return list(map(make_hasher, kinds))
 
     with open(filename, 'rb', 0) as fh:
         hashers = make_hashers(kinds)
@@ -373,16 +373,14 @@ class VerificationData(object):
         to the database.
         """
 
-        ignore_names = set(['.git', '_by_tags', '.DS_Store'])
+        ignore_names = set(['.git', '.DS_Store'])
 
         if os.path.isfile(path):
             self.add_file(path)
         else:
             for root, dirs, files in os.walk(path):
                 for i in range(len(dirs)):
-                    if i >= len(dirs):
-                        break
-                    if dirs[i] in ignore_names:
+                    while i < len(dirs) and dirs[i] in ignore_names:
                         del dirs[i]
 
                 for file in files:
@@ -433,8 +431,8 @@ class VerificationData(object):
             report['checks']['png'] = check_png(path)
 
         if len(hashes):
-            actual_hashes = get_hashes(path, hashes.keys())
-            for k, v in hashes.iteritems():
+            actual_hashes = get_hashes(path, list(hashes.keys()))
+            for k, v in hashes.items():
                 report['checks'][k] = v == actual_hashes[k]
 
         return report
@@ -448,7 +446,7 @@ class VerificationData(object):
             parallelism = multiprocessing.cpu_count() + 1
         pool = multiprocessing.pool.ThreadPool(processes=parallelism)
 
-        all_names = sorted(set(list(self.found_names) + self.hashes.keys() + self.other_data.keys()))
+        all_names = sorted(set(list(self.found_names) + list(self.hashes.keys()) + list(self.other_data.keys())))
         return pool.imap(lambda file: self.report_for_file(file), all_names)
 
     def count_reports(self):
