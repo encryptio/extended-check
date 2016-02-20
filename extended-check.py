@@ -4,6 +4,7 @@ import argparse
 import binascii
 import cgi
 import collections
+import csv
 import hashlib
 import multiprocessing
 import multiprocessing.pool
@@ -259,6 +260,35 @@ class VerificationData(object):
                         else:
                             self.other_data[path]['length'] = sizes[windows_filename]
 
+    def _add_csv(self, file_path):
+        self.found_names.add(file_path)
+        self.skip_verify.add(file_path)
+
+        base = os.path.dirname(file_path)
+
+        with open(file_path, 'r') as fh:
+            for row in csv.reader(fh):
+                local_path = '\\'
+                try:
+                    length = int(row[1])
+                    crc32 = row[2]
+                    local_filename = row[0]
+                    if len(row) >= 3:
+                        local_path = row[3]
+                    if not re.match(r'^[a-fA-F0-9]{8}$', crc32):
+                        raise ValueError()
+                except (ValueError, IndexError) as e:
+                    continue
+                else:
+                    if local_filename.startswith("\xEF\xBB\xBF"):
+                        local_filename = local_filename[3:]
+                    local_path = local_path.replace('\\', '/')
+                    while local_path.startswith('/'):
+                        local_path = local_path[1:]
+                    path = normalize_path(os.path.join(base, local_path, local_filename))
+                    self.hashes[path]['crc32'] = binascii.a2b_hex(crc32)
+                    self.other_data[path]['length'] = length
+
     def _add_md5sum(self, file_path):
         self.found_names.add(file_path)
         self.skip_verify.add(file_path)
@@ -316,6 +346,8 @@ class VerificationData(object):
         elif lpath.endswith('.shasum') or lpath.endswith('.sha1sum') or \
                 lpath.endswith('.sha256sum') or lpath.endswith('.sha512sum'):
             self._add_shasum(path)
+        elif lpath.endswith('.csv'):
+            self._add_csv(path)
         elif lpath.endswith('.flac'):
             self.other_data[path]['flac'] = True
         elif lpath.endswith('.zip') or lpath.endswith('.cbz'):
